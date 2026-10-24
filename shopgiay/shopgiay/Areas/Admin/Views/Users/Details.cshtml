@@ -1,0 +1,4 @@
+﻿@model CustomerAccountView
+@{ViewBag.Title="Chi tiết khách hàng";}
+<div class="container page"><a href="@Url.Action("Index")">← Người dùng</a><h1>@Model.Customer.Name</h1><p>@Model.Customer.Email · @Model.Customer.Phone</p><p>@Model.Customer.Address</p><p>Đơn hoàn thành: <b>@Model.CompletedOrders</b> · @(Model.CompletedOrders>=3?"Khách quen":"Khách hàng")</p><p>Nhận email voucher: @(Model.Customer.ReceiveVoucherEmails?"Có":"Không")</p><h2>Lịch sử mua hàng</h2>@Html.Partial("~/Views/Shared/_CustomerOrders.cshtml",Model.Orders)</div>
+

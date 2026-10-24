@@ -1,0 +1,17 @@
+.vs/
+**/bin/
+**/obj/
+packages/
+**/*.csproj.user
+**/App_Data/*.db*
+.local/
+shopgiay/Images/Products/
+shopgiay/Images/Banners/
+**/smtp.local.config
+**/smtp.local.config.*
+**/appsettings.*.local.json
+
+shopgiay/App_Data/vnpay.local.config*
+
+shopgiay/App_Data/bank-transfer.local.config*
+shopgiay/Images/Payments/

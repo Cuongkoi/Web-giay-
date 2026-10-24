@@ -1,0 +1,20 @@
+﻿@model Product
+@{var removed=Request.Form.GetValues("removeImageIds")??new string[0];var avatar=Model.Images.FirstOrDefault(i=>i.IsPrimary);}
+<div data-image-editor>
+<section class="image-editor">
+ <h3>Ảnh đại diện</h3><p class="muted">Chọn 1 ảnh PNG/JPG/JPEG, tối đa 5 MB. Ảnh này hiển thị trên danh sách sản phẩm và giỏ hàng.</p>
+ <label for="avatarFile" class="upload-label">Chọn ảnh đại diện</label><input type="file" id="avatarFile" name="avatarFile" accept=".png,.jpg,.jpeg,image/png,image/jpeg"/>
+ <input type="checkbox" name="removeAvatar" value="true" checked="@(Request.Form["removeAvatar"]=="true")" hidden/>
+ <div class="avatar-preview" data-avatar-preview>@if(avatar!=null){<img src="@avatar.Url" alt="Ảnh đại diện hiện tại" data-fallback/><button type="button" class="image-remove-button" data-remove-avatar aria-label="Bỏ ảnh đại diện" title="Bỏ ảnh này">×</button>}</div>
+ <small>Chọn file mới để thay ảnh đại diện hiện tại.</small>
+</section>
+<section class="image-editor">
+ <h3>Ảnh thông tin sản phẩm</h3><p class="muted">Chọn tối đa 8 ảnh PNG/JPG/JPEG, mỗi ảnh tối đa 5 MB. Không tính ảnh đại diện.</p>
+ <label for="imageFiles" class="upload-label">Thêm ảnh thông tin sản phẩm</label><input type="file" id="imageFiles" name="imageFiles" accept=".png,.jpg,.jpeg,image/png,image/jpeg" multiple/><small>Có thể chọn nhiều ảnh cùng lúc hoặc bấm chọn thêm nhiều lần. Bấm × ở góc ảnh để bỏ. Thay đổi được lưu khi nhấn Lưu sản phẩm.</small><p data-image-message class="validation" role="status" aria-live="polite"></p>
+ <div class="image-editor-grid" data-existing-images>
+ @foreach(var image in Model.Images.Where(x=>!x.IsPrimary).OrderBy(x=>x.SortOrder).ThenBy(x=>x.Id)){
+  <div class="image-editor-card" data-existing-image><img src="@image.Url" alt="Ảnh thông tin sản phẩm" data-fallback/><button type="button" class="image-remove-button" data-remove-existing aria-label="Bỏ ảnh thông tin này" title="Bỏ ảnh này">×</button><input type="checkbox" name="removeImageIds" value="@image.Id" checked="@removed.Contains(image.Id.ToString())" hidden/></div>
+ }
+ </div><div class="image-editor-grid" data-new-images></div><p data-image-count class="muted"></p>
+</section>
+</div>

@@ -1,0 +1,5 @@
+﻿@model shopgiay.ModelView.LoginInput
+@{ViewData["Title"]="Đăng nhập quản trị";}<div class="login-wrap"><div class="login-heading"><span class="eyebrow">STEP STORE / ADMIN</span><h1>Chào mừng<br/>trở lại.</h1><p>Quản lý sản phẩm và đơn hàng<br/>của cửa hàng tại một nơi.</p></div><form method="post" class="form-panel" action="@Url.Action("Login","Account",new { area="Admin" })">@Html.AntiForgeryToken()<input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl"/><h2>Đăng nhập quản trị</h2>@Html.ValidationSummary(false,"",new { @class="validation" })<label>Email</label>@Html.TextBoxFor(m=>m.Email,new { type="text",autocomplete="username" })<label>Mật khẩu</label>@Html.PasswordFor(m=>m.Password,new { autocomplete="current-password",required="required" })<button class="button full">ĐĂNG NHẬP →</button><a href="/">← Quay lại cửa hàng</a></form></div>
+
+
+

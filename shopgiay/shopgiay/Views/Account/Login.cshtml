@@ -1,0 +1,4 @@
+﻿@model LoginInput
+@{ViewBag.Title="Đăng nhập khách hàng";}
+<div class="customer-auth container page"><h1>Chào mừng trở lại.</h1><form method="post" class="form-panel" action="@Url.Action("Login")">@Html.AntiForgeryToken()<input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl"/>@Html.ValidationSummary(false,"",new{@class="validation"})<label for="Email">Email</label>@Html.TextBoxFor(m=>m.Email,new{type="email",autocomplete="username",required="required"})<label for="Password">Mật khẩu</label>@Html.PasswordFor(m=>m.Password,new{autocomplete="current-password",required="required"})<button class="button full">ĐĂNG NHẬP →</button><a href="@Url.Action("Register")">Chưa có tài khoản? Đăng ký ngay</a></form></div>
+

@@ -1,0 +1,17 @@
+﻿@{var menuCategories=ViewBag.MenuCategories as List<Category> ?? new List<Category>();}
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>@ViewData["Title"] · CUONGKOI Sneaker</title><link rel="stylesheet" href="~/Content/site.css?v=accounts-dashboard-1"/><link rel="stylesheet" href="~/Content/payments.css?v=2"/></head>
+<body><div class="announcement">ĐI MỖI NGÀY. CHẤT RIÊNG MỖI BƯỚC. <span>Miễn phí vận chuyển cho đơn từ 2.000.000đ</span></div>
+<header><div class="header-inner"><a class="logo" href="@Url.Action("Index","Home",new { area="" })">CUONGKOI Sneaker<i>THE SNEAKER DESTINATION</i></a><form class="search" method="get" action="@Url.Action("Index","Home",new { area="" })"><input name="q" value="@Request.QueryString["q"]" placeholder="Bạn đang tìm đôi giày nào?" aria-label="Tìm sản phẩm"/><button aria-label="Tìm kiếm">⌕</button></form><div class="header-tools"><a href="@Url.Action("Index","Account",new { area="" })">◎ <span>Tài khoản của tôi</span></a><a href="@Url.Action("Index","Cart",new { area="" })">♧ <span>Giỏ hàng</span></a></div></div>
+<nav><a href="@Url.Action("Index","Home",new{area=""})">TRANG CHỦ</a>@foreach(var category in menuCategories){<a href="@Url.Action("Index","Home",new{area="",categoryId=category.Id})">@category.Name.ToUpper()</a>}</nav></header>
+
+<main>@if(TempData["Success"]!=null){<div class="notice success" role="status">@TempData["Success"]</div>}@if(TempData["Error"]!=null){<div class="notice error" role="alert">@TempData["Error"]</div>}@RenderBody()</main>
+<section class="service-strip"><div><b>↗ GIAO HÀNG TOÀN QUỐC</b><small>Đóng gói cẩn thận, giao đến tận tay</small></div><div><b>◈ KIỂM TRA KHI NHẬN</b><small>Yên tâm với từng lựa chọn</small></div><div><b>↔ TƯ VẤN CHỌN SIZE</b><small>Tìm đôi giày vừa vặn với bạn</small></div><div><b>♡ LUÔN SẴN SÀNG HỖ TRỢ</b><small>Đồng hành trong từng bước chân</small></div></section>
+<footer><div><a class="logo" href="@Url.Action("Index","Home",new { area="" })">Qúy Cường<span>Sneaker</span></a><p>Một đôi giày tốt. Một hành trình mới.<br/>Khám phá phong cách của riêng bạn.</p></div><div><b>KHÁM PHÁ</b>@foreach(var category in menuCategories){<a href="@Url.Action("Index","Home",new{area="",categoryId=category.Id})">@category.Name</a>}<a href="/?sale=true">Sản phẩm khuyến mãi</a></div><div><b>MUA SẮM CÙNG CUONGKOI SNEAKER</b><p>Thanh toán COD hoặc chuyển khoản</p><p>Phí giao hàng: 35.000đ<br/>Miễn phí từ 2.000.000đ</p></div><div><b>QUẢN LÝ CỬA HÀNG</b><a href="/Admin">Đăng nhập quản trị</a><p>Thông tin liên hệ cửa hàng<br/>sẽ được cập nhật tại đây.</p></div></footer><div class="copyright">© @DateTime.Now.Year Qúy Cường Sneaker. Make your next step count.</div>
+<script>document.querySelectorAll('img[data-fallback]').forEach(img=>img.addEventListener('error',()=>{img.src='/Images/placeholder.svg';},{once:true}));document.querySelectorAll('form[data-confirm]').forEach(f=>f.addEventListener('submit',e=>{if(!confirm(f.dataset.confirm))e.preventDefault()}));</script>
+@RenderSection("Scripts",required:false)</body></html>
+
+
+
+
+

@@ -1,0 +1,7 @@
+﻿<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>@ViewBag.Title · Quản trị STEP STORE</title><link rel="stylesheet" href="@Url.Content("~/Content/site.css?v=accounts-dashboard-1")"/><link rel="stylesheet" href="@Url.Content("~/Content/admin.css?v=dashboard-1")"/></head><body class="admin-body"><aside class="admin-sidebar"><a class="logo" href="/Admin">STEP<span>ADMIN</span></a><p>QUẢN LÝ CỬA HÀNG</p><a href="/Admin">▥ Dashboard</a><a href="/Admin/Users">♙ Người dùng</a><a href="/Admin/EmailSettings">✉ Cấu hình email</a><a href="/Admin/PaymentSettings">▣ Cấu hình thanh toán</a><a href="/Admin/Vouchers">% Voucher khách quen</a><a href="/Admin/Banners">▧ Banner</a><a href="/Admin/Brands">◇ Thương hiệu</a><a href="/Admin/Categories">▤ Danh mục</a><a href="/Admin/Products">▦ Sản phẩm</a><a href="/Admin/Products/Orders">☷ Đơn hàng</a>@if(User.Identity.IsAuthenticated){<form action="/Admin/Account/Logout" method="post">@Html.AntiForgeryToken()<button class="text-button">Đăng xuất</button></form>}</aside><div class="admin-workspace"><header class="admin-topbar"><b>Không gian quản trị</b><span>@User.Identity.Name</span></header><main>@if(TempData["Success"]!=null){<div class="notice success">@TempData["Success"]</div>}@if(TempData["Error"]!=null){<div class="notice error">@TempData["Error"]</div>}@RenderBody()</main></div><script src="@Url.Content("~/Scripts/site.js")"></script>@RenderSection("Scripts",required:false)</body></html>
+
+
+
+
+
+
