@@ -16,9 +16,16 @@ public class CartController : shopgiay.Controllers.ShopController {
  void Save(List<CartLine> lines)=>Session["cart"]=lines;
  async Task<List<CartRow>> Rows(){var lines=Read();var ids=lines.Select(x=>x.VariantId).ToList();var variants=await db.Variants.Include(v=>v.Product).Where(v=>ids.Contains(v.Id)).ToListAsync();return lines.Where(l=>variants.Any(v=>v.Id==l.VariantId)).Select(l=>new CartRow(variants.Single(v=>v.Id==l.VariantId),l.Quantity)).ToList();}
  public async Task<ActionResult> Index()=>View(await Rows());
+ [HttpGet,OutputCache(NoStore=true,Duration=0,VaryByParam="*")]
+ public async Task<ActionResult> Availability(int productId){
+  var variants=await db.Variants.AsNoTracking().Where(v=>v.ProductId==productId&&v.Product.Active).ToListAsync();
+  var cart=Read();
+  return Json(variants.Select(v=>new{ id=v.Id,limit=Math.Min(v.Stock,20),remaining=Math.Max(0,Math.Min(v.Stock,20)-cart.Where(l=>l.VariantId==v.Id).Sum(l=>l.Quantity)) }),JsonRequestBehavior.AllowGet);
+ }
  [HttpPost, ValidateAntiForgeryToken]public async Task<ActionResult> Add(int variantId,int quantity=1){
  var v=await db.Variants.Include(v=>v.Product).SingleOrDefaultAsync(v=>v.Id==variantId);var cart=Read();var old=cart.SingleOrDefault(c=>c.VariantId==variantId);var total=(old?.Quantity??0)+quantity;
- if(v==null||!v.Product.Active||quantity<1||total>Math.Min(v.Stock,20)){TempData["Error"]="Vui lòng chọn size còn hàng. Tối đa 20 đôi mỗi size.";return RedirectToAction("Index");}
+ if(v==null)return HttpNotFound();
+ if(!v.Product.Active||quantity<1||quantity>20||quantity>Math.Max(0,Math.Min(v.Stock,20)-(old?.Quantity??0))){TempData["Error"]="Số lượng còn có thể thêm của size này đã thay đổi. Vui lòng chọn lại.";return RedirectToAction("Product","Home",new{id=v.ProductId});}
  cart.RemoveAll(c=>c.VariantId==variantId);cart.Add(new CartLine(variantId,total));Save(cart);TempData["Success"]="Đã thêm sản phẩm vào giỏ hàng.";return RedirectToAction("Index");
  }
  [HttpPost, ValidateAntiForgeryToken]public async Task<ActionResult> Update(int variantId,int quantity){var cart=Read();if(quantity==0){cart.RemoveAll(c=>c.VariantId==variantId);}else{var v=await db.Variants.FindAsync(variantId);if(v==null||quantity<1||quantity>Math.Min(v.Stock,20)){TempData["Error"]="Số lượng vượt quá tồn kho hoặc giới hạn 20 đôi.";return RedirectToAction("Index");}var i=cart.FindIndex(c=>c.VariantId==variantId);if(i>=0)cart[i]=new CartLine(variantId,quantity);}Save(cart);return RedirectToAction("Index");}

@@ -22,7 +22,13 @@ public class HomeController : shopgiay.Controllers.ShopController {
  ViewBag.HomeBanners=await db.Banners.AsNoTracking().Where(b=>b.Active).OrderBy(b=>b.SortOrder).ThenBy(b=>b.Id).ToListAsync();
  return View(new Catalog{Products=await query.ToListAsync(),Q=q,Brand=selectedBrand?.Name??brand,BrandId=brandId,Sort=sort,Sale=sale,CategoryId=categoryId,CategoryName=selectedCategory?.Name});
  }
- public async Task<ActionResult> Product(int id){var p=await db.Products.Include(p=>p.Images).Include(p=>p.Variants).Include(p=>p.Category).SingleOrDefaultAsync(p=>p.Id==id&&p.Active);return p==null?HttpNotFound():View(p);}
+ public async Task<ActionResult> Product(int id){
+  var p=await db.Products.Include(p=>p.Images).Include(p=>p.Variants).Include(p=>p.Category).SingleOrDefaultAsync(p=>p.Id==id&&p.Active);
+  if(p==null)return HttpNotFound();
+  var cart=Session["cart"] as List<CartLine>??new List<CartLine>();
+  ViewBag.AvailableQuantities=p.Variants.ToDictionary(v=>v.Id,v=>Math.Max(0,Math.Min(v.Stock,20)-cart.Where(l=>l.VariantId==v.Id).Sum(l=>l.Quantity)));
+  return View(p);
+ }
  public ActionResult Error()=>View();
 }
 
