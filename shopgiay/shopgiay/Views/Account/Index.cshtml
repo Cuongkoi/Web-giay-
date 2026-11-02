@@ -1,6 +1,15 @@
 ﻿@model CustomerAccountView
-@{ViewBag.Title="Tài khoản của tôi";}
-<div class="container page"><div class="section-heading"><div><span class="eyebrow">MY ACCOUNT</span><h1>Xin chào, @Model.Customer.Name.</h1><p>@Model.Customer.Email</p></div><form action="@Url.Action("Logout")" method="post">@Html.AntiForgeryToken()<button class="secondary">Đăng xuất</button></form></div><div class="account-status"><b>@(Model.CompletedOrders>=3?"Khách quen":"Khách hàng")</b><p>@Model.CompletedOrders đơn đã hoàn thành. @if(Model.CompletedOrders<3){<span>Hoàn thành thêm @(3-Model.CompletedOrders) đơn để nhận ưu đãi khách quen.</span>}else{<span>Bạn có thể sử dụng voucher dành riêng cho khách quen.</span>}</p></div>
-<section class="account-vouchers"><h2>Voucher của bạn</h2>@if(Model.Vouchers.Count==0){<p class="muted">Chưa có voucher phù hợp. Voucher dành cho khách có ít nhất 3 đơn đã hoàn thành.</p>}else{<div class="voucher-grid">@foreach(var v in Model.Vouchers){<article class="voucher-card"><b>GIẢM @v.Percent%</b><code>@v.Code</code><p>Đơn từ @v.MinimumSubtotal.ToString("N0")₫ · Hết hạn @v.ValidUntil.AddHours(7).ToString("dd/MM/yyyy HH:mm")</p><small>Mỗi tài khoản dùng một lần. Nhập mã khi thanh toán.</small></article>}</div>}</section>
-<form action="@Url.Action("EmailPreference")" method="post" class="email-preference">@Html.AntiForgeryToken()<label><input type="checkbox" name="receiveVoucherEmails" value="true" checked="@Model.Customer.ReceiveVoucherEmails"/> Nhận email thông báo voucher dành cho khách quen</label><button class="secondary">Lưu lựa chọn</button></form><h2>Đơn hàng của tôi</h2>@Html.Partial("_CustomerOrders",Model.Orders)</div>
+@{ViewBag.Title = "Tài khoản của tôi";}
+<div class="container page">
+    <div class="section-heading"><div><span class="eyebrow">MY ACCOUNT</span><h1>Xin chào, @Model.Customer.Name.</h1><p>@Model.Customer.Email</p></div><form action="@Url.Action("Logout")" method="post">@Html.AntiForgeryToken()<button class="secondary">Đăng xuất</button></form></div><div class="account-status"><b>@(Model.CompletedOrders>=3?"Khách quen":"Khách hàng")</b><p>@Model.CompletedOrders đơn đã hoàn thành. @if (Model.CompletedOrders < 3)
+    {<span>Hoàn thành thêm @(3-Model.CompletedOrders) đơn để nhận ưu đãi khách quen.</span>}
+    else
+    {<span>Bạn có thể sử dụng voucher dành riêng cho khách quen.</span>}</p></div>
+    <section class="account-vouchers"><h2>Voucher của bạn</h2>@if (Model.Vouchers.Count == 0)
+    {<p class="muted">Chưa có voucher phù hợp. Voucher dành cho khách có ít nhất 3 đơn đã hoàn thành.</p>}
+    else
+    {<div class="voucher-grid">@foreach (var v in Model.Vouchers)
+        {<article class="voucher-card"><b>GIẢM @v.Percent%</b><code>@v.Code</code><p>Đơn từ @v.MinimumSubtotal.ToString("N0")₫ · Hết hạn @v.ValidUntil.AddHours(7).ToString("dd/MM/yyyy HH:mm")</p><small>Mỗi tài khoản dùng một lần. Nhập mã khi thanh toán.</small></article>}</div>}</section>
+    <form action="@Url.Action("EmailPreference")" method="post" class="email-preference">@Html.AntiForgeryToken()<label><input type="checkbox" name="receiveVoucherEmails" value="true" checked="@Model.Customer.ReceiveVoucherEmails" /> Nhận email thông báo voucher dành cho khách quen</label><button class="secondary">Lưu lựa chọn</button></form><h2>Đơn hàng của tôi</h2>@Html.Partial("_CustomerOrders", Model.Orders)
+</div>
 

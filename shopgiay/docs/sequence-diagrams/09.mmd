@@ -1,0 +1,40 @@
+sequenceDiagram
+    autonumber
+    actor K as Khách hàng
+    participant UI as Website
+    participant C as CartController
+    participant DB as ShopDb / SQL Server
+    actor N as Ngân hàng bên ngoài
+    actor A as Quản trị viên
+    participant P as Admin ProductsController
+    K->>UI: Chọn chuyển khoản và đặt đơn
+    Note over UI,DB: Tạo đơn theo biểu đồ 08, PaymentMethod = TRANSFER
+    UI->>C: GET /Cart/Complete?code
+    C->>DB: Tìm đơn theo Code và CustomerId hiện tại
+    alt Không phải đơn của khách hoặc không tồn tại
+        C-->>UI: HTTP 404
+    else Có quyền xem
+        C-->>UI: Đơn, ảnh QR, số tiền và nội dung chuyển khoản
+        UI-->>K: Nội dung gồm tên khách và mã đơn
+    end
+    K->>N: Chuyển khoản bằng ứng dụng ngân hàng
+    Note over UI,N: QR tĩnh; website không nhận API xác nhận tiền từ ngân hàng
+    A->>N: Kiểm tra giao dịch thực tế
+    N-->>A: Thông tin tiền đã nhận
+    A->>UI: Bấm Xác nhận đã nhận tiền
+    UI->>P: POST ConfirmTransfer(id), cookie admin và token
+    P->>DB: Đọc Order
+    alt Không có đơn
+        P-->>UI: HTTP 404
+    else Không phải TRANSFER hoặc đơn Đã hủy
+        P-->>UI: Từ chối xác nhận
+    else Đã Paid
+        P-->>UI: Thông báo đã xác nhận trước đó
+    else Đơn chuyển khoản hợp lệ
+        P->>DB: PaymentStatus = Paid; PaidAt = UTC now
+        alt Xung đột cập nhật
+            P-->>UI: Yêu cầu tải lại
+        else Lưu thành công
+            P-->>UI: Thông báo xác nhận nhận tiền
+        end
+    end

@@ -1,0 +1,65 @@
+sequenceDiagram
+    autonumber
+    actor K as Khách hàng
+    participant UI as Trình duyệt
+    participant C as CartController
+    participant V as VoucherService
+    participant DB as ShopDb / SQL Server
+    participant S as Session
+    participant E as EmailOutboxService
+    K->>UI: Xác nhận đặt hàng
+    UI->>C: POST /Cart/Checkout kèm dữ liệu và token
+    Note over UI,C: CustomerAuthorize kiểm tra trước action
+    C->>S: Đọc giỏ hàng
+    C->>DB: Nạp lại sản phẩm, giá và tồn kho
+    alt Giỏ trống
+        C-->>UI: Redirect /Cart
+    else Có hàng
+        C->>C: Kiểm tra form, Active và Quantity so với Stock
+        opt Chọn TRANSFER
+            C->>C: Đọc BankTransferSettings và kiểm tra Ready
+        end
+        alt Dữ liệu sai hoặc chuyển khoản chưa sẵn sàng
+            C-->>UI: Render checkout kèm lỗi
+        else Kiểm tra ban đầu hợp lệ
+            critical Transaction tạo đơn
+                C->>DB: BeginTransaction
+                C->>C: Tính subtotal và shipping
+                Note over C: Ship 35.000đ; miễn khi subtotal từ 2.000.000đ
+                C->>V: Evaluate với lockVoucher=true
+                opt Có voucher
+                    V->>DB: Kiểm tra điều kiện; đọc voucher với UPDLOCK,HOLDLOCK
+                end
+                V-->>C: Kết quả tính giảm giá
+                alt Voucher không hợp lệ
+                    C-->>UI: Hiện lỗi; transaction chưa commit được giải phóng
+                else Voucher hợp lệ hoặc không dùng
+                    C->>DB: Đọc lại Customer và kiểm tra IsActive
+                    alt Customer không còn hợp lệ
+                        C-->>UI: HTTP 403; không commit
+                    else Customer hợp lệ
+                        C->>C: Tạo Order, Code, OrderItems và tổng thanh toán
+                        Note over C: Status = Chờ xác nhận; PaymentStatus = Unpaid
+                        C->>DB: Cập nhật điện thoại, địa chỉ khách
+                        C->>DB: Trừ Stock từng Variant và tăng Revision
+                        C->>DB: INSERT Orders và OrderItems
+                        opt Dùng voucher
+                            C->>DB: INSERT VoucherRedemptions
+                        end
+                        C->>DB: SaveChanges
+                        alt Xung đột tồn kho hoặc lượt dùng voucher
+                            C->>DB: Rollback
+                            C-->>UI: Redirect /Cart kèm lỗi để thử lại
+                        else Lưu thành công
+                            C->>DB: Commit
+                            C->>S: Xóa giỏ; lưu lastOrder
+                            C->>E: Kick xử lý email nền
+                            C-->>UI: Redirect /Cart/Complete?code
+                        end
+                    end
+                end
+            end
+        end
+    end
+    Note over C,DB: Total = subtotal - discount + shipping; giá lấy từ server
+    Note over C,DB: Revision của Variant hỗ trợ phát hiện cập nhật đồng thời

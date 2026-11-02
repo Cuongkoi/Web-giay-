@@ -1,0 +1,35 @@
+sequenceDiagram
+    autonumber
+    actor A as Quản trị viên
+    participant UI as Trang quản lý đơn
+    participant C as ProductsController
+    participant DB as ShopDb / SQL Server
+    A->>UI: Chọn hủy đơn
+    UI->>C: POST Status(id, Đã hủy)
+    C->>DB: Đọc Order
+    alt Trạng thái không phải Chờ xác nhận hoặc Đã xác nhận
+        C-->>UI: Không được hủy; chống hủy lặp
+    else TRANSFER hoặc VNPAY có PaymentStatus Paid hoặc Review
+        C-->>UI: Yêu cầu xử lý với khách; chưa hỗ trợ hoàn tiền tự động
+    else Đơn VNPAY cũ còn Unpaid và chưa đủ 20 phút
+        C-->>UI: Yêu cầu chờ hết thời gian thanh toán
+    else Đủ điều kiện hủy
+        critical Transaction hủy đơn
+            C->>DB: BeginTransaction và nạp OrderItems
+            loop Từng dòng sản phẩm trong đơn
+                C->>DB: Tìm Variant theo VariantId
+                opt Variant vẫn tồn tại
+                    C->>DB: Cộng lại Stock; tăng Revision
+                end
+            end
+            C->>DB: Xóa VoucherRedemptions của đơn
+            C->>DB: Cập nhật Status = Đã hủy; SaveChanges
+            alt Có xung đột cập nhật
+                C->>DB: Rollback toàn bộ
+                C-->>UI: Thông báo tải lại
+            else Thành công
+                C->>DB: Commit
+                C-->>UI: Danh sách đơn với trạng thái Đã hủy
+            end
+        end
+    end

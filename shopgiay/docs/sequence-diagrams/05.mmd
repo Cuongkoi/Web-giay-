@@ -1,0 +1,36 @@
+sequenceDiagram
+    autonumber
+    actor K as Khách hàng
+    participant UI as Giao diện sản phẩm
+    participant JS as stock-quantity.js
+    participant C as CartController
+    participant DB as ShopDb / SQL Server
+    participant S as Session giỏ hàng
+    K->>UI: Chọn một size
+    UI->>JS: Sự kiện change
+    JS->>JS: Áp dụng giới hạn có sẵn trên trang
+    JS->>C: GET /Cart/Availability?productId
+    C->>DB: Đọc Variants thuộc sản phẩm đang bán
+    DB-->>C: Stock theo size
+    C->>S: Đọc số lượng đã thêm theo VariantId
+    S-->>C: Số lượng trong giỏ
+    C->>C: limit = min(Stock, 20)
+    C->>C: remaining = max(0, limit - số lượng trong giỏ)
+    C-->>JS: JSON id, limit, remaining; không cache
+    alt remaining bằng 0
+        JS->>UI: Làm mờ và vô hiệu hóa size; khóa thêm giỏ
+    else remaining lớn hơn 0
+        JS->>UI: Đặt max số lượng bằng remaining
+        loop Khách tăng, giảm hoặc nhập số lượng
+            K->>UI: Thay đổi số lượng
+            UI->>JS: click hoặc input
+            JS->>JS: Giới hạn số nguyên trong khoảng cho phép
+            alt Đã đạt số lượng tối đa
+                JS->>UI: Khóa nút cộng, làm mờ size đang chọn
+            else Chưa đạt tối đa
+                JS->>UI: Cho tăng tiếp; khóa nút trừ khi ở mức tối thiểu
+            end
+        end
+    end
+    Note over UI,JS: Size đang chọn đạt max vẫn được gửi khi thêm giỏ
+    Note over UI,JS: Quay lại tab cũng gọi lại Availability

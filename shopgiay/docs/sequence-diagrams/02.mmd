@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    actor K as Khách hàng
+    participant UI as Trình duyệt
+    participant C as AccountController
+    participant P as PasswordService
+    participant DB as ShopDb / SQL Server
+    participant A as SeparateAuthService
+    K->>UI: Mở form đăng ký
+    UI->>C: GET /Account/Register
+    C-->>UI: Form và anti-forgery token
+    K->>UI: Nhập tên, email, mật khẩu và xác nhận
+    UI->>C: POST /Account/Register
+    Note over UI,C: Sai token bị chặn trước khi xử lý action
+    C->>C: Chuẩn hóa email và tên; kiểm tra ModelState
+    C->>DB: Kiểm tra email đã tồn tại
+    alt Dữ liệu sai hoặc email đã được dùng
+        C-->>UI: Form kèm lỗi
+    else Hợp lệ
+        C->>P: Hash mật khẩu
+        P-->>C: PBKDF2-SHA256, salt và hash
+        C->>DB: INSERT Customers và SaveChanges
+        alt Xung đột dữ liệu khi lưu
+            C-->>UI: Báo email đã được đăng ký
+        else Lưu thành công
+            C->>A: SignInCustomer(customer)
+            A-->>UI: Set-Cookie ShopGiay.CustomerAuth
+            C-->>UI: Redirect /Account
+            UI-->>K: Tài khoản cá nhân
+        end
+    end

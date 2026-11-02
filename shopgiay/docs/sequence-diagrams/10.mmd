@@ -1,0 +1,40 @@
+sequenceDiagram
+    autonumber
+    actor A as Quản trị viên
+    participant UI as Trang quản lý đơn
+    participant C as ProductsController
+    participant DB as ShopDb / SQL Server
+    participant E as EmailOutboxService
+    A->>UI: Chọn trạng thái tiếp theo
+    UI->>C: POST /Admin/Products/Status(id, status)
+    C->>DB: Đọc Order
+    DB-->>C: Status, PaymentMethod, PaymentStatus
+    C->>C: Kiểm tra chuyển trạng thái hợp lệ
+    Note over C: Chờ xác nhận → Đã xác nhận → Đang giao → Hoàn thành
+    alt Không tìm thấy đơn
+        C-->>UI: HTTP 404
+    else Bước chuyển trạng thái không hợp lệ
+        C-->>UI: Từ chối; giữ nguyên trạng thái
+    else TRANSFER hoặc VNPAY cũ nhưng chưa Paid
+        C-->>UI: Chặn xác nhận, giao và hoàn thành
+    else Cho phép chuyển trạng thái
+        critical Transaction cập nhật trạng thái
+            C->>DB: BeginTransaction
+            C->>C: Gán trạng thái mới
+            opt Hoàn thành đơn COD
+                C->>C: PaymentStatus = Paid; PaidAt = UTC now
+            end
+            C->>DB: SaveChanges
+            alt Xung đột cập nhật
+                C->>DB: Rollback
+                C-->>UI: Yêu cầu tải lại và thử lại
+            else Lưu thành công
+                C->>DB: Commit
+                opt Trạng thái mới là Hoàn thành
+                    C->>E: Kick kiểm tra khách quen và email voucher
+                end
+                C-->>UI: Redirect danh sách đơn
+            end
+        end
+    end
+    Note over UI,DB: Giao hàng vật lý do cửa hàng thực hiện ngoài website

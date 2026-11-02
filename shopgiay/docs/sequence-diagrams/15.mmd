@@ -1,0 +1,53 @@
+sequenceDiagram
+    autonumber
+    actor A as Quản trị viên
+    participant C as VouchersController
+    participant DB as ShopDb / SQL Server
+    participant W as EmailOutboxService
+    participant T as EmailTransport / SMTP
+    actor K as Khách hàng nhận email
+    A->>C: POST Edit voucher, thời gian Việt Nam, token
+    C->>C: Chuẩn hóa mã; kiểm tra form và thời gian
+    C->>DB: Kiểm tra mã trùng
+    alt Dữ liệu không hợp lệ
+        C-->>A: Form kèm lỗi
+    else Hợp lệ
+        C->>C: Đổi thời gian Việt Nam sang UTC
+        C->>DB: Lưu Vouchers
+        C->>W: Kick
+        C-->>A: Đã lưu voucher
+    end
+    Note over W: Worker còn được kích hoạt khi hoàn thành đơn hoặc đổi lựa chọn nhận tin
+    W->>DB: Tìm voucher hiệu lực và khách đủ điều kiện
+    Note over W,DB: Khách Active, nhận tin, có ít nhất 3 đơn hoàn thành, chưa dùng voucher
+    W->>DB: INSERT VoucherEmails.Pending nếu chưa có cặp khách-voucher
+    alt Chưa bật hoặc chưa cấu hình SMTP cho voucher
+        Note over W,DB: Giữ thư chờ, chưa đánh dấu Sent
+    else Đã sẵn sàng gửi
+        W->>DB: Thu hồi khóa Sending quá 10 phút về Pending
+        W->>DB: Lấy tối đa 20 thư Pending/Failed đến hạn
+        loop Từng thư
+            W->>DB: Chiếm thư bằng UPDATE có điều kiện sang Sending
+            W->>DB: Kiểm tra lại khách, voucher, nhận tin và lượt dùng
+            alt Không còn đủ điều kiện
+                W->>DB: Status = Cancelled
+            else Còn đủ điều kiện
+                W->>T: Gửi email mã giảm giá
+                alt SMTP chấp nhận
+                    T-->>K: Email ưu đãi
+                    W->>DB: Status = Sent; ghi SentAt
+                else Gửi lỗi
+                    W->>DB: Status = Failed; RetryAfter sau 15 phút
+                end
+            end
+        end
+    end
+    opt Admin yêu cầu gửi lại thư Failed
+        A->>C: POST RetryEmails
+        C->>DB: Đưa Failed về Pending; xóa RetryAfter
+        C->>W: Kick
+    end
+    opt Admin ngừng voucher
+        A->>C: POST Delete(id)
+        C->>DB: Active = false; giữ lịch sử sử dụng
+    end

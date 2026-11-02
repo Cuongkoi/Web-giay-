@@ -1,0 +1,43 @@
+sequenceDiagram
+    autonumber
+    actor K as Khách hàng
+    participant UI as Trình duyệt
+    participant F as CustomerAuthorize
+    participant C as CartController
+    participant V as VoucherService
+    participant DB as ShopDb / SQL Server
+    UI->>F: GET /Cart/Checkout
+    alt Chưa đăng nhập khách hàng
+        F-->>UI: Redirect /Account/Login kèm returnUrl
+    else Đã đăng nhập
+        F->>C: Thực thi Checkout
+        C->>DB: Nạp sản phẩm và biến thể từ giỏ
+        alt Giỏ hàng trống
+            C-->>UI: Redirect /Cart
+        else Có hàng
+            C-->>UI: Form điền sẵn tên, điện thoại và địa chỉ
+        end
+    end
+    K->>UI: Nhập voucher và bấm Áp dụng
+    UI->>C: POST Checkout với applyVoucher=true
+    C->>C: Kiểm tra lại hàng; bỏ yêu cầu tên, điện thoại, địa chỉ cho bước xem trước
+    C->>V: Evaluate(customerId, code, subtotal)
+    alt Không nhập mã
+        V-->>C: Discount bằng 0
+    else Có nhập mã
+        V->>DB: Đếm đơn Hoàn thành của khách
+        alt Ít hơn 3 đơn
+            V-->>C: Chưa đủ điều kiện khách quen
+        else Đủ điều kiện
+            V->>DB: Đọc voucher và lượt dùng của khách
+            V->>V: Kiểm tra Active, thời hạn, đơn tối thiểu, chưa dùng
+            alt Điều kiện không đạt
+                V-->>C: Thông báo lỗi cụ thể
+            else Hợp lệ
+                V->>V: Làm tròn subtotal nhân tỷ lệ giảm
+                V-->>C: Mã voucher và Discount
+            end
+        end
+    end
+    C-->>UI: Render lại checkout với số tiền giảm hoặc lỗi
+    Note over C,DB: Chưa tạo đơn hoặc ghi nhận lượt dùng ở bước xem trước

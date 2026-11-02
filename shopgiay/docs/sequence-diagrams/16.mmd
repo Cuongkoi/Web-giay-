@@ -1,0 +1,34 @@
+sequenceDiagram
+    autonumber
+    participant App as Ứng dụng MVC
+    participant W as EmailOutboxService
+    participant O as OwnerOrderEmailService
+    participant F as Cấu hình SMTP
+    participant DB as ShopDb / SQL Server
+    participant T as EmailTransport / SMTP
+    actor A as Chủ shop
+    App->>W: Application_Start gọi Start
+    Note over App,W: Timer chạy sau 10 giây và mỗi phút; cũng Kick sau tạo đơn
+    W->>W: Chặn hai lượt worker chạy đồng thời trong cùng tiến trình
+    W->>O: Process
+    O->>F: Đọc bật thông báo đơn, SMTP và email chủ shop
+    alt Chưa đủ cấu hình hoặc chưa bật
+        O-->>W: Kết thúc; giữ trạng thái thư chờ
+    else Cấu hình hợp lệ
+        O->>DB: Thu hồi đơn Sending đã hết thời hạn khóa
+        O->>DB: Lấy tối đa 20 đơn Pending/Failed đến hạn
+        loop Từng đơn
+            O->>DB: UPDATE có điều kiện sang Sending, khóa 10 phút
+            O->>DB: Đọc Items, Customer và trạng thái mới nhất
+            O->>T: Gửi email chi tiết đơn
+            alt SMTP chấp nhận thư
+                T-->>A: Email đơn hàng mới
+                O->>DB: OwnerEmailStatus = Sent; ghi thời gian gửi
+            else Gửi lỗi
+                O->>DB: OwnerEmailStatus = Failed; thử lại sau 15 phút
+            end
+            Note over O,DB: Chỉ cập nhật cột email, tránh ghi đè trạng thái đơn và thanh toán
+        end
+    end
+    Note over W,DB: Khi web dừng, dữ liệu hàng đợi vẫn còn trong database
+    Note over T,A: SMTP nhận thư chưa đồng nghĩa người nhận đã đọc; retry có thể trùng thư

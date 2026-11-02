@@ -1,0 +1,36 @@
+sequenceDiagram
+    autonumber
+    actor K as Khách hàng
+    participant UI as Trình duyệt
+    participant C as HomeController
+    participant DB as ShopDb / SQL Server
+    participant S as Session
+    K->>UI: Mở cửa hàng hoặc nhập điều kiện lọc
+    UI->>C: GET /?q, brandId, categoryId, sort, sale
+    C->>DB: Đọc thương hiệu và danh mục đang hiển thị
+    opt Có brandId hoặc categoryId
+        C->>DB: Kiểm tra tồn tại và Active
+        DB-->>C: Kết quả kiểm tra
+    end
+    alt Bộ lọc theo ID không hợp lệ
+        C-->>UI: HTTP 404
+    else Điều kiện hợp lệ
+        C->>DB: Lọc Products.Active và nạp Variants
+        Note over C,DB: Tìm Name/Sku; lọc giảm giá; sắp giá hoặc Featured
+        C->>DB: Đọc banner Active theo SortOrder
+        DB-->>C: Sản phẩm, size, tồn kho và banner
+        C-->>UI: Render Views/Home/Index
+        UI-->>K: Danh sách sản phẩm
+    end
+    K->>UI: Chọn một sản phẩm
+    UI->>C: GET /Home/Product/id
+    C->>DB: Nạp sản phẩm Active, Images, Variants, Category
+    alt Không có sản phẩm đang bán
+        C-->>UI: HTTP 404
+    else Tìm thấy
+        C->>S: Đọc số lượng từng variant đã có trong giỏ
+        S-->>C: CartLine theo VariantId
+        C->>C: Tính số lượng còn có thể thêm theo size
+        C-->>UI: Render Product và AvailableQuantities
+        UI-->>K: Chi tiết, ảnh, size và giới hạn số lượng
+    end

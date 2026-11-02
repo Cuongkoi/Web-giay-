@@ -1,0 +1,49 @@
+sequenceDiagram
+    autonumber
+    actor A as Quản trị viên
+    participant UI as Trang cấu hình
+    participant C as Controller cấu hình
+    participant S as Service cấu hình
+    participant F as App_Data và thư mục ảnh
+    participant T as EmailTransport / SMTP
+    A->>UI: Nhập và lưu cấu hình
+    UI->>C: POST kèm token và cookie admin
+    alt Cấu hình chuyển khoản
+        C->>C: Kiểm tra ảnh QR thật, định dạng và dung lượng
+        C->>C: Nếu bật phải có ảnh QR
+        alt Hợp lệ
+            C->>F: Lưu ảnh mới trong Images/Payments
+            C->>S: Save bank transfer settings
+            S->>F: Ghi bank-transfer.local.config qua file tạm
+            C->>F: Xóa ảnh QR cũ nếu đã thay hoặc xóa
+            C-->>UI: Đã lưu cấu hình
+        else Không hợp lệ hoặc lỗi lưu
+            C->>F: Dọn ảnh mới nếu đã ghi mà lưu cấu hình thất bại
+            C-->>UI: Form kèm lỗi
+        end
+    else Cấu hình email
+        C->>C: Kiểm tra SMTP, thông tin gửi và email chủ shop
+        Note over C,S: Để trống mật khẩu giữ khóa cũ khi thông số SMTP không đổi
+        alt Hợp lệ
+            C->>S: Save email settings
+            S->>S: Mã hóa App Password bằng Windows DPAPI
+            S->>F: Lưu smtp.local.config
+            opt Bật email voucher hoặc thông báo đơn
+                C->>C: Kick email worker
+            end
+            C-->>UI: Thông báo cấu hình có hiệu lực
+        else Sai dữ liệu hoặc lỗi lưu
+            C-->>UI: Form kèm lỗi; không hiển thị lại App Password
+        end
+    end
+    opt Admin gửi email kiểm tra
+        A->>C: POST EmailSettings/Test với email nhận
+        C->>C: Kiểm tra form và thông tin SMTP đã lưu
+        C->>T: Gửi thử
+        alt SMTP nhận thư
+            C-->>UI: Báo đã gửi tới SMTP
+        else Gửi lỗi
+            C-->>UI: Báo kiểm tra tài khoản và cấu hình
+        end
+    end
+    Note over S,F: Các cấu hình này lưu trong file, không phải bảng SQL

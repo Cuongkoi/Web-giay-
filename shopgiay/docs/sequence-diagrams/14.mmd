@@ -1,0 +1,55 @@
+sequenceDiagram
+    autonumber
+    actor A as Quản trị viên
+    participant UI as Giao diện admin
+    participant C as Controller tương ứng
+    participant DB as ShopDb / SQL Server
+    participant I as ProductImageService
+    participant F as Images/Banners
+    A->>UI: Thêm hoặc sửa danh mục, thương hiệu, banner
+    UI->>C: POST Edit kèm token
+    alt Danh mục hoặc thương hiệu
+        C->>DB: Kiểm tra tên trùng và bản ghi hiện có
+        C->>C: Chuẩn hóa tên, kiểm tra ModelState
+        opt Đổi tên thương hiệu
+            C->>DB: Đồng bộ Product.Brand của sản phẩm liên kết
+        end
+    else Banner
+        C->>C: Kiểm tra tiêu đề, liên kết nội bộ và form
+        opt Có ảnh mới
+            C->>I: Prepare và Save ảnh
+            I->>F: Ghi file tên ngẫu nhiên
+        end
+    end
+    alt Dữ liệu không hợp lệ
+        C-->>UI: Form kèm lỗi
+    else Hợp lệ
+        C->>DB: INSERT hoặc UPDATE rồi SaveChanges
+        alt Lưu thất bại
+            opt Banner có file vừa ghi
+                C->>I: Xóa file mới
+            end
+            C-->>UI: Thông báo lỗi
+        else Thành công
+            opt Banner đã thay ảnh
+                C->>I: Dọn ảnh cũ không còn tham chiếu
+            end
+            C-->>UI: Redirect danh sách
+        end
+    end
+    opt Xóa danh mục hoặc thương hiệu
+        UI->>C: POST Delete(id)
+        C->>DB: Kiểm tra Products đang liên kết
+        alt Còn sản phẩm
+            C-->>UI: Chặn xóa; đề nghị chuyển sản phẩm hoặc ẩn
+        else Không còn sản phẩm
+            C->>DB: DELETE và SaveChanges
+            C-->>UI: Kết quả xóa
+        end
+    end
+    opt Xóa banner
+        UI->>C: POST Delete(id)
+        C->>DB: DELETE Banner và SaveChanges
+        C->>I: Dọn ảnh không còn tham chiếu
+    end
+    Note over C,DB: Active=false ẩn mục tương ứng khỏi giao diện cửa hàng

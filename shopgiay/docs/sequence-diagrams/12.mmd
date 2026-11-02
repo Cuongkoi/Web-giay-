@@ -1,0 +1,35 @@
+sequenceDiagram
+    autonumber
+    actor K as Khách hàng
+    participant UI as Trình duyệt
+    participant C as AccountController
+    participant DB as ShopDb / SQL Server
+    actor A as Quản trị viên
+    participant U as UsersController
+    participant Auth as SeparateAuthService
+    K->>UI: Mở tài khoản cá nhân
+    UI->>C: GET /Account với cookie CustomerAuth
+    C->>DB: Nạp Orders và Items theo CustomerId
+    C->>C: Đếm đơn Hoàn thành
+    opt Có ít nhất 3 đơn hoàn thành
+        C->>DB: Đọc voucher đang hiệu lực và khách chưa dùng
+    end
+    C-->>UI: Hồ sơ, lịch sử đơn và voucher đủ điều kiện
+    opt Đổi lựa chọn nhận email voucher
+        UI->>C: POST /Account/EmailPreference
+        C->>DB: Cập nhật ReceiveVoucherEmails
+        C->>C: Kick email worker
+        C-->>UI: Thông báo lưu thành công
+    end
+    A->>U: GET /Admin/Users?q
+    U->>DB: Tìm tên/email và đếm đơn hoàn thành theo khách
+    U-->>A: Danh sách người dùng và hạng khách
+    A->>U: POST SetActive(id, active=false), token
+    U->>DB: IsActive = false; tạo SecurityStamp mới
+    U-->>A: Đã khóa và thu hồi phiên
+    K->>Auth: Request tiếp theo với cookie cũ
+    Auth->>DB: Kiểm tra IsActive và SecurityStamp
+    DB-->>Auth: Tài khoản không hợp lệ
+    Auth-->>UI: Hết hạn cookie, principal anonymous
+    Note over Auth,UI: Action cần quyền chuyển khách về đăng nhập
+    Note over U,DB: Mở khóa cũng đổi SecurityStamp; đơn hàng được giữ lại

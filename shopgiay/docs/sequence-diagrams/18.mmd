@@ -1,0 +1,25 @@
+sequenceDiagram
+    autonumber
+    actor A as Quản trị viên
+    participant UI as Dashboard
+    participant C as DashboardController
+    participant R as DashboardRepository
+    participant DB as ShopDb / SQL Server
+    A->>UI: Chọn 7, 30, 90 ngày hoặc tất cả
+    UI->>C: GET /Admin với range
+    C->>R: Load(range)
+    R->>R: Chuẩn hóa range; mặc định 30
+    R->>R: Tính mốc ngày Việt Nam rồi quy đổi UTC
+    R->>DB: Đọc Orders có Status = Hoàn thành theo ngày đặt
+    DB-->>R: Tổng tiền và thông tin khách của các đơn
+    R->>DB: JOIN OrderItems với các đơn đã lọc
+    DB-->>R: Sản phẩm, thương hiệu và số lượng bán
+    R->>R: Tính doanh thu, số đơn, số đôi, số khách
+    R->>R: Nhóm top 8 sản phẩm theo số đôi
+    R->>R: Nhóm thương hiệu, lấy top 6 và nhóm khác
+    R->>R: Nhóm khách theo số đôi rồi tổng chi; lấy top 8
+    R-->>C: DashboardViewModel
+    C-->>UI: Render số liệu, biểu đồ và bảng xếp hạng
+    UI-->>A: Kết quả theo khoảng thời gian
+    Note over R,DB: Doanh thu là Total đã trừ voucher và gồm phí giao hàng
+    Note over R,DB: Tên sản phẩm/thương hiệu lấy từ snapshot OrderItems

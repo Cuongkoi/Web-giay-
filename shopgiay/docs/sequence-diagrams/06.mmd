@@ -1,0 +1,50 @@
+sequenceDiagram
+    autonumber
+    actor K as Khách hàng
+    participant UI as Trình duyệt và JavaScript
+    participant C as CartController
+    participant DB as ShopDb / SQL Server
+    participant S as Session
+    K->>UI: Bấm thêm vào giỏ
+    UI->>C: GET Availability để kiểm tra lại
+    C->>DB: Đọc tồn kho hiện tại
+    C->>S: Đọc giỏ hiện tại
+    C-->>UI: Số lượng còn có thể thêm
+    alt Không gọi được API kiểm tra
+        UI-->>K: Báo không kiểm tra được; cho thử lại
+    else Số lượng đã vượt giới hạn mới
+        UI->>UI: Giảm số lượng và yêu cầu khách kiểm tra lại
+    else Số lượng vẫn hợp lệ
+        UI->>C: POST /Cart/Add variantId, quantity, token
+        C->>DB: Nạp Variant và Product
+        C->>S: Đọc dòng giỏ hàng cũ
+        alt Variant không tồn tại
+            C-->>UI: HTTP 404
+        else Không còn bán hoặc số lượng không hợp lệ
+            C-->>UI: Redirect trang sản phẩm và thông báo chọn lại
+        else Hợp lệ
+            C->>S: Ghi tổng số lượng vào Session.cart
+            C-->>UI: Redirect /Cart và thông báo thành công
+        end
+    end
+    opt Cập nhật hoặc xóa tại giỏ hàng
+        K->>UI: Chỉnh số lượng hoặc chọn Xóa
+        opt Số lượng cập nhật lớn hơn 0
+            UI->>C: GET Availability
+            C-->>UI: Giới hạn tổng của size
+        end
+        UI->>C: POST /Cart/Update
+        alt quantity bằng 0
+            C->>S: Xóa CartLine tương ứng
+        else Số lượng hợp lệ so với tồn kho và mức 20
+            C->>S: Thay số lượng CartLine
+        else Số lượng không hợp lệ
+            C->>C: Ghi thông báo lỗi, giữ giỏ cũ
+        end
+        C-->>UI: Redirect /Cart
+    end
+    UI->>C: GET /Cart
+    C->>S: Đọc VariantId và Quantity
+    C->>DB: Đọc sản phẩm, giá và tồn kho hiện tại
+    C-->>UI: Render giỏ hàng và tổng tiền
+    Note over C,DB: Thêm/cập nhật giỏ không trừ tồn kho

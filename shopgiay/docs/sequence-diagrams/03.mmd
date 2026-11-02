@@ -1,0 +1,39 @@
+sequenceDiagram
+    autonumber
+    actor K as Khách hàng
+    participant UI as Trình duyệt
+    participant C as AccountController
+    participant M as MemoryCache
+    participant DB as ShopDb / SQL Server
+    participant P as PasswordService
+    participant A as SeparateAuthService
+    K->>UI: Nhập email và mật khẩu
+    UI->>C: POST /Account/Login và returnUrl
+    C->>M: Đọc số lần đăng nhập sai theo IP
+    alt Đã sai ít nhất 8 lần
+        C-->>UI: Yêu cầu đợi 15 phút
+    else Chưa bị giới hạn
+        C->>C: Kiểm tra form, chuẩn hóa email
+        C->>DB: Tìm Customers theo email
+        DB-->>C: Customer hoặc không có
+        opt Tài khoản tồn tại và đang hoạt động
+            C->>P: Verify mật khẩu với PasswordHash
+            P-->>C: Đúng hoặc sai
+        end
+        alt Sai mật khẩu, không có tài khoản hoặc bị khóa
+            C->>M: Tăng số lần sai, thời hạn 15 phút
+            C-->>UI: Thông báo đăng nhập thất bại
+        else Đăng nhập hợp lệ
+            C->>M: Xóa bộ đếm sai
+            C->>A: SignInCustomer
+            A-->>UI: Cookie CustomerAuth, ticket 7 ngày
+            Note over A,UI: Ticket chứa CustomerId và SecurityStamp; cookie không persistent
+            C-->>UI: Redirect returnUrl nội bộ hoặc /Account
+            UI->>A: Request tiếp theo kèm cookie
+            A->>DB: Kiểm tra CustomerId, IsActive, SecurityStamp
+            DB-->>A: Khách hàng hợp lệ
+            A->>A: Gán Context.Items.Customer và vai trò Customer
+            Note over A,UI: Layout lấy Customer.Name từ Context.Items
+            UI-->>K: Hiển thị tên khách hàng trên đầu trang
+        end
+    end

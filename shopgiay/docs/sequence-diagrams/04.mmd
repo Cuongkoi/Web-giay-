@@ -1,0 +1,46 @@
+sequenceDiagram
+    autonumber
+    actor U as Người dùng
+    participant UI as Trình duyệt
+    participant A as SeparateAuthService
+    participant DB as ShopDb / SQL Server
+    participant F as Bộ lọc quyền
+    participant C as Controller
+    UI->>A: Request tới một URL
+    alt URL thuộc /Admin
+        A->>A: Chỉ đọc ShopGiay.AdminAuth
+        A->>DB: Tìm AdminUsers, so SecurityStamp
+    else URL cửa hàng
+        A->>A: Chỉ đọc ShopGiay.CustomerAuth
+        A->>DB: Kiểm tra Customers và trạng thái hoạt động
+    end
+    DB-->>A: Dữ liệu tài khoản
+    A->>F: Principal đúng vai trò hoặc anonymous
+    alt Action bảo vệ nhưng chưa đủ quyền
+        F-->>UI: Redirect trang login đúng vai trò và returnUrl
+        opt Người dùng đăng nhập admin
+            U->>UI: Nhập tài khoản quản trị
+            UI->>C: POST /Admin/Account/Login
+            C->>C: Kiểm tra token, form, giới hạn 8 lần sai theo IP
+            C->>DB: Tìm admin theo email
+            DB-->>C: AdminUser và PasswordHash
+            C->>C: PasswordService.Verify
+            alt Đúng thông tin
+                C->>A: SignInAdmin
+                A-->>UI: Cookie AdminAuth, ticket 4 giờ
+                C-->>UI: Redirect URL admin hợp lệ hoặc /Admin
+            else Sai thông tin
+                C-->>UI: Form kèm lỗi; tăng bộ đếm sai
+            end
+        end
+    else Đủ quyền hoặc action công khai
+        F->>C: Thực thi action
+        C-->>UI: Kết quả
+    end
+    opt Đăng xuất một vai trò
+        U->>UI: Bấm đăng xuất
+        UI->>C: POST Logout tương ứng kèm token
+        C->>A: SignOutCustomer hoặc SignOutAdmin
+        A-->>UI: Cho cookie của vai trò đó hết hạn
+        Note over A,UI: Giữ cookie vai trò còn lại và Session giỏ hàng
+    end

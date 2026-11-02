@@ -1,0 +1,55 @@
+sequenceDiagram
+    autonumber
+    actor A as Quản trị viên
+    participant UI as Form sản phẩm
+    participant C as ProductsController
+    participant I as ProductImageService
+    participant F as Images/Products
+    participant DB as ShopDb / SQL Server
+    A->>UI: Mở form thêm hoặc sửa
+    UI->>C: GET /Admin/Products/Edit/id
+    C->>DB: Đọc thương hiệu, danh mục và sản phẩm nếu sửa
+    C-->>UI: Form và danh sách size/tồn kho
+    A->>UI: Nhập dữ liệu; chọn ảnh đại diện và ảnh thông tin
+    UI->>C: POST Edit kèm file và token
+    C->>DB: Kiểm tra thương hiệu, danh mục và dữ liệu hiện có
+    C->>C: Kiểm tra size, màu, giá; tự tạo hoặc giữ SKU
+    C->>C: Kiểm tra ảnh thuộc sản phẩm; tối đa 8 ảnh thông tin
+    C->>I: Prepare các ảnh mới
+    I-->>C: Bytes và định dạng đã kiểm tra, hoặc lỗi
+    alt Form hoặc ảnh không hợp lệ
+        C-->>UI: Form kèm lỗi; chọn lại file mới nếu cần
+    else Hợp lệ
+        C->>I: Save ảnh bằng tên ngẫu nhiên
+        I->>F: Ghi file ảnh
+        alt Lỗi ghi file
+            C->>I: Dọn các file vừa ghi
+            C-->>UI: Thông báo lỗi lưu ảnh
+        else Ghi file thành công
+            critical Transaction lưu sản phẩm
+                C->>DB: BeginTransaction
+                C->>DB: Lưu Product, Variants và ProductImages
+                Note over C,DB: Tăng Revision tồn kho và ImagesRevision khi cập nhật
+                opt Có ảnh đại diện
+                    C->>DB: Đặt IsPrimary sau lần lưu đầu và lưu tiếp
+                end
+                alt Lỗi database hoặc xung đột
+                    C->>DB: Rollback
+                    C->>I: Xóa các file mới đã ghi
+                    C-->>UI: Báo lỗi dữ liệu thay đổi
+                else Thành công
+                    C->>DB: Commit
+                    C->>I: Xóa file cũ không còn được tham chiếu
+                    I->>F: Dọn ảnh thay hoặc xóa
+                    C-->>UI: Redirect danh sách sản phẩm
+                end
+            end
+        end
+    end
+    opt Admin xóa sản phẩm
+        UI->>C: POST Delete(id), token
+        C->>DB: Xóa sản phẩm và dữ liệu phụ thuộc; SaveChanges
+        C->>I: Dọn ảnh sau khi lưu thành công
+        Note over C,DB: Lịch sử OrderItems giữ tên, giá và size đã mua
+        C-->>UI: Danh sách sản phẩm
+    end
